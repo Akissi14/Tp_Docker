@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  database:
+    build: ./database         # Chemin vers le dossier contenant le Dockerfile de Postgres
+    container_name: database   # Nom du conteneur pour le DNS interne
+    networks:
+      - app-network            # Connexion au réseau commun
+    environment:               # Variables d'environnement pour la DB
+      - POSTGRES_DB=db
+      - POSTGRES_USER=usr
+      - POSTGRES_PASSWORD=pwd
+    volumes:
+      - db-data:/var/lib/postgresql/data # Persistance des données
+
+  backend:
+    build: ./backend          # Chemin vers le dossier contenant le Dockerfile Java
+    container_name: my-api     # Nom utilisé par Apache pour le ProxyPass
+    networks:
+      - app-network
+    depends_on:
+      - database               # Attendre que la DB soit lancée avant de démarrer
+
+  httpd:
+    build: ./httpd            # Chemin vers le dossier contenant Apache + my-httpd.conf
+    container_name: my-httpd
+    ports:
+      - "80:80"                # Exposition du port standard HTTP
+    networks:
+      - app-network
+    depends_on:
+      - backend                # Attendre que l'API soit lancée avant de démarrer
+
+networks:
+  app-network:                # Déclaration du réseau "pont"
+    driver: bridge
+
+volumes:
+  db-data:                    # Déclaration du volume pour sauvegarder tes données SQL
+
+
