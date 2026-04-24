@@ -1,7 +1,7 @@
 name: Build and Push Docker
 on:
   workflow_run:
-    workflows: ["Test Backend"] # Doit être identique au 'name' du 1er fichier
+    workflows: ["Test Backend"]
     types:
       - completed
     branches:
@@ -9,7 +9,6 @@ on:
 
 jobs:
   build-and-push-docker-image:
-    # On vérifie que le workflow de test a réussi
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
@@ -19,23 +18,46 @@ jobs:
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Build and push images
+      - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-backend:latest
           push: true
 
-      - name: Build image and push database
+      - name: Build and push database
         uses: docker/build-push-action@v6
         with:
           context: ./database
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
 
-      - name: Build image and push httpd
+      - name: Build and push httpd
         uses: docker/build-push-action@v6
         with:
           context: ./httpd
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
+
+  # --- NOUVEAU JOB DE DEPLOIEMENT ---
+  deploy:
+    needs: build-and-push-docker-image # Attend que les images soient sur DockerHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # On scanne la clé du serveur pour éviter l'erreur "Host key verification failed"
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml \
+            --private-key ~/.ssh/id_rsa \
+            -u admin \
+            -e "ansible_python_interpreter=/opt/docker_venv/bin/python"

@@ -1,0 +1,16 @@
+---
+# tasks file for roles/database
+
+- name: Run Database
+  docker_container:
+    name: database
+    image: akissi14/tp-devops-database:latest  
+    networks:
+      - name: app-network
+    env:
+      POSTGRES_DB: "db"
+      POSTGRES_USER: "usr"
+      POSTGRES_PASSWORD: "pwd"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart_policy: always

@@ -1,0 +1,15 @@
+---
+# tasks file for roles/app
+
+- name: Run Backend API
+  docker_container:
+    name: my-api
+    image: akissi14/tp-devops-backend:latest  
+    networks:
+      - name: app-network
+    env:
+      # Ces variables permettent à Spring de trouver la DB via le réseau Docker
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://database:5432/db"
+      SPRING_DATASOURCE_USERNAME: "usr"
+      SPRING_DATASOURCE_PASSWORD: "pwd"
+    restart_policy: always
