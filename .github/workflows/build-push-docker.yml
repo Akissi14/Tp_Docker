@@ -59,5 +59,4 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml \
             --private-key ~/.ssh/id_rsa \
-            -u admin \
-            -e "ansible_python_interpreter=/opt/docker_venv/bin/python"
+            -u admin
